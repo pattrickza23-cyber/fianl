@@ -1,0 +1,284 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Admin Panel - ระบบจัดการสัมมนา/เวิร์คช็อป</title>
+  <style>
+    body{font-family:system-ui,sans-serif;background:#f5f7fb;margin:0;padding:24px;}
+    .wrap{max-width:1000px;margin:auto;}
+    .card{
+      background:#fff;padding:20px;border-radius:16px;
+      box-shadow:0 8px 24px rgba(0,0,0,.06);margin-bottom:16px;
+    }
+    h1{margin:0 0 8px}
+    .sub{color:#666}
+
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+    label{font-weight:600;font-size:14px}
+    input,textarea,select{
+      width:100%;padding:10px 12px;margin-top:6px;border:1.5px solid #d6dbe3;
+      border-radius:10px;font-size:14px;outline:none;box-sizing:border-box;background:#fff;
+    }
+    textarea{min-height:70px;resize:vertical}
+    input:focus,textarea:focus,select:focus{border-color:#3b82f6}
+    .full{grid-column:1/-1}
+
+    .btn{
+      border:none;border-radius:10px;padding:10px 14px;font-weight:700;cursor:pointer;
+      text-decoration:none; display:inline-flex; align-items:center; justify-content:center;
+    }
+    .btn-primary{background:#3b82f6;color:#fff}
+    .btn-primary:hover{background:#2563eb}
+    .btn-warn{background:#f59e0b;color:#111}
+    .btn-warn:hover{background:#d97706}
+    .btn-danger{background:#ef4444;color:#fff}
+    .btn-danger:hover{background:#dc2626}
+    .btn-ghost{background:#e5e7eb;color:#111}
+    .btn-ghost:hover{background:#d1d5db}
+
+    table{width:100%;border-collapse:collapse;font-size:14px}
+    th,td{padding:10px;border-bottom:1px solid #eee;text-align:left;vertical-align:top}
+    th{background:#f8fafc}
+    .actions{display:flex;gap:6px;flex-wrap:wrap}
+
+    .topbar{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+    .pill{background:#eef2ff;color:#3730a3;padding:4px 8px;border-radius:999px;font-size:12px;font-weight:700}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+
+    <div class="card topbar">
+      <div>
+        <h1>Admin Control Panel</h1>
+        <div class="sub">จัดการกิจกรรม / ผู้ลงทะเบียน / การชำระเงิน (เดโม)</div>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <!-- ✅ กลับไปหน้าเว็บ Canva ของคุณ -->
+        <a class="btn btn-ghost" 
+           href="https://pattrickza.my.canva.site/final" 
+           target="_blank">
+          กลับหน้าแรก (Canva)
+        </a>
+        <span class="pill">localStorage demo</span>
+      </div>
+    </div>
+
+    <!-- ฟอร์มเพิ่ม/แก้กิจกรรม -->
+    <div class="card">
+      <h2 style="margin-top:0;">เพิ่ม / แก้ไขกิจกรรม</h2>
+
+      <form id="eventForm">
+        <div class="grid">
+          <div>
+            <label>ชื่อกิจกรรม</label>
+            <input id="title" required placeholder="เช่น Workshop SQL Basic" />
+          </div>
+          <div>
+            <label>สถานที่</label>
+            <input id="location" required placeholder="เช่น ห้องประชุม A / ออนไลน์" />
+          </div>
+
+          <div>
+            <label>วันเวลาเริ่ม</label>
+            <input id="start" type="datetime-local" required />
+          </div>
+          <div>
+            <label>วันเวลาจบ</label>
+            <input id="end" type="datetime-local" required />
+          </div>
+
+          <div>
+            <label>จำนวนที่นั่ง</label>
+            <input id="capacity" type="number" min="1" required placeholder="เช่น 50" />
+          </div>
+          <div>
+            <label>ราคา (บาท)</label>
+            <input id="price" type="number" min="0" required placeholder="เช่น 799" />
+          </div>
+
+          <div class="full">
+            <label>รายละเอียดกิจกรรม</label>
+            <textarea id="desc" placeholder="พิมพ์รายละเอียดสั้น ๆ"></textarea>
+          </div>
+        </div>
+
+        <div style="display:flex;gap:8px;margin-top:10px;">
+          <button class="btn btn-primary" type="submit" id="saveBtn">บันทึกกิจกรรม</button>
+          <button class="btn btn-ghost" type="button" id="resetBtn">ล้างฟอร์ม</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- ตารางกิจกรรม -->
+    <div class="card">
+      <h2 style="margin-top:0;">รายการกิจกรรมทั้งหมด</h2>
+      <table>
+        <thead>
+          <tr>
+            <th style="width:40px;">ID</th>
+            <th>ชื่อกิจกรรม</th>
+            <th>วันเวลา</th>
+            <th>สถานที่</th>
+            <th>ที่นั่ง/ราคา</th>
+            <th style="width:170px;">จัดการ</th>
+          </tr>
+        </thead>
+        <tbody id="eventTbody"></tbody>
+      </table>
+    </div>
+
+  </div>
+
+  <script>
+    const KEY = "demoEvents";
+    const loadEvents = () => JSON.parse(localStorage.getItem(KEY) || "[]");
+    const saveEvents = (arr) => localStorage.setItem(KEY, JSON.stringify(arr));
+
+    const form = document.getElementById("eventForm");
+    const tbody = document.getElementById("eventTbody");
+    const saveBtn = document.getElementById("saveBtn");
+    const resetBtn = document.getElementById("resetBtn");
+
+    const title = document.getElementById("title");
+    const locationEl = document.getElementById("location");
+    const start = document.getElementById("start");
+    const end = document.getElementById("end");
+    const capacity = document.getElementById("capacity");
+    const price = document.getElementById("price");
+    const desc = document.getElementById("desc");
+
+    let editingId = null;
+
+    (function seed(){
+      const cur = loadEvents();
+      if(cur.length === 0){
+        saveEvents([
+          {
+            id: 1,
+            title:"Workshop SQL Basic",
+            desc:"สอน SQL พื้นฐานสำหรับมือใหม่",
+            start:"2025-02-10T09:00",
+            end:"2025-02-10T16:00",
+            location:"ห้องประชุม A",
+            capacity:50,
+            price:799
+          },
+          {
+            id: 2,
+            title:"Seminar AI Basic",
+            desc:"รู้จัก AI และการใช้งานเบื้องต้น",
+            start:"2025-02-15T13:00",
+            end:"2025-02-15T16:00",
+            location:"หอประชุมใหญ่",
+            capacity:200,
+            price:0
+          }
+        ]);
+      }
+    })();
+
+    function render(){
+      const events = loadEvents();
+      tbody.innerHTML = "";
+      events.forEach(ev => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${ev.id}</td>
+          <td>
+            <b>${ev.title}</b><br/>
+            <span style="color:#666">${ev.desc || "-"}</span>
+          </td>
+          <td>
+            เริ่ม: ${new Date(ev.start).toLocaleString("th-TH")}<br/>
+            จบ: ${new Date(ev.end).toLocaleString("th-TH")}
+          </td>
+          <td>${ev.location}</td>
+          <td>${ev.capacity} ที่นั่ง<br/>${ev.price} บาท</td>
+          <td class="actions">
+            <button class="btn btn-warn" onclick="editEvent(${ev.id})">แก้ไข</button>
+            <button class="btn btn-danger" onclick="deleteEvent(${ev.id})">ลบ</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+    render();
+
+    form.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const events = loadEvents();
+
+      if(editingId === null){
+        const newId = events.length ? Math.max(...events.map(x=>x.id)) + 1 : 1;
+        events.push({
+          id:newId,
+          title:title.value.trim(),
+          desc:desc.value.trim(),
+          start:start.value,
+          end:end.value,
+          location:locationEl.value.trim(),
+          capacity:+capacity.value,
+          price:+price.value
+        });
+      } else {
+        const idx = events.findIndex(x=>x.id===editingId);
+        if(idx>-1){
+          events[idx] = {
+            id:editingId,
+            title:title.value.trim(),
+            desc:desc.value.trim(),
+            start:start.value,
+            end:end.value,
+            location:locationEl.value.trim(),
+            capacity:+capacity.value,
+            price:+price.value
+          };
+        }
+        editingId = null;
+        saveBtn.textContent = "บันทึกกิจกรรม";
+        saveBtn.className = "btn btn-primary";
+      }
+
+      saveEvents(events);
+      form.reset();
+      render();
+      alert("บันทึกกิจกรรมสำเร็จ (เดโม)");
+    });
+
+    resetBtn.addEventListener("click", ()=>{
+      form.reset();
+      editingId = null;
+      saveBtn.textContent = "บันทึกกิจกรรม";
+      saveBtn.className = "btn btn-primary";
+    });
+
+    window.editEvent = function(id){
+      const events = loadEvents();
+      const ev = events.find(x=>x.id===id);
+      if(!ev) return;
+
+      editingId = id;
+      title.value = ev.title;
+      desc.value = ev.desc;
+      start.value = ev.start;
+      end.value = ev.end;
+      locationEl.value = ev.location;
+      capacity.value = ev.capacity;
+      price.value = ev.price;
+
+      saveBtn.textContent = "อัปเดตกิจกรรม";
+      saveBtn.className = "btn btn-warn";
+      window.scrollTo({top:0, behavior:"smooth"});
+    }
+
+    window.deleteEvent = function(id){
+      if(!confirm("ต้องการลบกิจกรรมนี้ใช่ไหม?")) return;
+      const events = loadEvents().filter(x=>x.id!==id);
+      saveEvents(events);
+      render();
+    }
+  </script>
+</body>
+</html>
